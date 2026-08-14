@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minha Rotina Diária — Rastreador de Hábitos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EEF0EA;
+    --paper-raised: #F8F9F4;
+    --ink: #1E2A22;
+    --ink-soft: #55635A;
+    --line: #D3D8CB;
+    --sun: #D9A441;
+    --sun-soft: #F1E3C2;
+    --dusk: #6B4E71;
+    --done: #3B7A6E;
+    --done-soft: #DCEAE6;
+    --danger: #B4553E;
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(30,42,34,0.06), 0 6px 20px rgba(30,42,34,0.06);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app{
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 28px 20px 120px;
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    margin-bottom: 26px;
+    gap: 16px;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 6px;
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight: 600;
+    font-size: 30px;
+    margin: 0;
+    line-height: 1.05;
+    text-transform: capitalize;
+  }
+  .progress-wrap{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap: 6px;
+    flex-shrink:0;
+  }
+  .progress-ring-row{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+  }
+  .cal-btn{
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    border: 1.5px solid var(--line);
+    background: var(--paper-raised);
+    color: var(--ink-soft);
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .cal-btn:hover{ border-color: var(--sun); color: var(--ink); }
+  .cal-btn svg{ width: 18px; height: 18px; }
+  .progress-ring-box{ position:relative; width:64px; height:64px; }
+  .progress-ring-box svg{ transform: rotate(-90deg); }
+  .progress-ring-box .ring-track{ stroke: var(--line); }
+  .progress-ring-box .ring-fill{ stroke: var(--done); transition: stroke-dashoffset .5s ease; }
+  .progress-fraction{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight:500;
+  }
+  .progress-label{
+    font-size: 11px;
+    color: var(--ink-soft);
+    font-family:'IBM Plex Mono', monospace;
+  }
+
+  /* ---------- Empty state ---------- */
+  .empty{
+    background: var(--paper-raised);
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    padding: 40px 24px;
+    text-align:center;
+    color: var(--ink-soft);
+  }
+  .empty h2{
+    font-family:'Fraunces', serif;
+    font-size: 20px;
+    color: var(--ink);
+    margin: 0 0 6px;
+  }
+  .empty p{ margin: 0 0 18px; font-size: 14px; }
+
+  /* ---------- Day rail ---------- */
+  .rail-wrap{
+    position: relative;
+    padding-left: 56px;
+    margin-top: 8px;
+  }
+  .rail-line{
+    position:absolute;
+    left: 26px;
+    top: 4px;
+    bottom: 4px;
+    width: 2px;
+    background: var(--line);
+  }
+  .now-marker{
+    position:absolute;
+    left: 8px;
+    right: 0;
+    display:flex;
+    align-items:center;
+    gap: 8px;
+    transform: translateY(-50%);
+    z-index: 3;
+    pointer-events:none;
+  }
+  .now-marker .dot{
+    width: 10px; height:10px; border-radius:50%;
+    background: var(--sun);
+    box-shadow: 0 0 0 4px rgba(217,164,65,0.25);
+    margin-left: 14px;
+  }
+  .now-marker .line{
+    flex:1;
+    height:1px;
+    background: repeating-linear-gradient(90deg, var(--sun) 0 6px, transparent 6px 11px);
+    opacity:0.7;
+  }
+  .now-marker .time{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--sun);
+    background: var(--paper);
+    padding: 1px 6px;
+    border-radius: 6px;
+  }
+
+  .hour-tick{
+    position:absolute;
+    left: 0;
+    width: 44px;
+    text-align:right;
+    transform: translateY(-50%);
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-soft);
+    opacity: 0.55;
+  }
+
+  .habit-item{
+    position: relative;
+    margin-bottom: 14px;
+  }
+  .habit-node{
+    position:absolute;
+    left: -56px;
+    top: 20px;
+    width: 12px; height:12px;
+    border-radius:50%;
+    background: var(--paper);
+    border: 2px solid var(--line);
+    transform: translate(20.5px,-6px);
+    z-index:2;
+  }
+  .habit-item.done .habit-node{
+    border-color: var(--done);
+    background: var(--done);
+  }
+
+  .habit-card{
+    background: var(--paper-raised);
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    padding: 14px 14px 12px;
+    box-shadow: var(--shadow);
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  }
+  .habit-item.done .habit-card{
+    border-color: var(--done);
+    background: var(--done-soft);
+  }
+  .habit-card:active{ transform: scale(0.99); }
+
+  .habit-top{
+    display:flex;
+    align-items:flex-start;
+    gap: 12px;
+  }
+  .check{
+    flex-shrink:0;
+    width: 26px; height: 26px;
+    border-radius: 8px;
+    border: 2px solid var(--ink-soft);
+    background: transparent;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    color: transparent;
+    transition: all .15s ease;
+    margin-top: 1px;
+  }
+  .habit-item.done .check{
+    background: var(--done);
+    border-color: var(--done);
+    color: white;
+  }
+  .check svg{ width:15px; height:15px; }
+
+  .habit-main{ flex:1; min-width:0; }
+  .habit-name-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap: 8px;
+  }
+  .habit-name-left{
+    display:flex;
+    align-items:center;
+    gap: 9px;
+    min-width:0;
+  }
+  .habit-icon{
+    font-size: 25px;
+    line-height: 1;
+    flex-shrink:0;
+  }
+  .habit-name{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size: 20px;
+    word-break: break-word;
+  }
+  .habit-item.done .habit-name{ text-decoration: line-through; text-decoration-color: var(--done); text-decoration-thickness: 1.5px; opacity: 0.75; }
+  .habit-time{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+    flex-shrink:0;
+  }
+
+  .habit-meta{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-top: 10px;
+    gap: 10px;
+  }
+  .streak{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--sun);
+    display:flex;
+    align-items:center;
+    gap: 4px;
+  }
+  .streak.zero{ color: var(--ink-soft); opacity: 0.6; }
+
+  .week-strip{ display:flex; gap: 4px; }
+  .week-strip .sq{
+    width: 9px; height: 9px;
+    border-radius: 3px;
+    background: var(--line);
+    opacity: 0.6;
+  }
+  .week-strip .sq.on{ background: var(--done); opacity:1; }
+  .week-strip .sq.off-scheduled{ background: transparent; border: 1.4px solid var(--line); opacity:1;}
+  .week-strip .sq.today{ box-shadow: 0 0 0 1.5px var(--sun); }
+
+  .habit-actions{
+    display:flex; gap: 6px;
+  }
+  .icon-btn{
+    background:none; border:none; cursor:pointer;
+    color: var(--ink-soft);
+    padding: 4px;
+    border-radius: 6px;
+    display:flex;
+    opacity: 0.5;
+    transition: opacity .15s;
+  }
+  .icon-btn:hover{ opacity: 1; }
+  .icon-btn svg{ width:14px; height:14px; }
+
+  /* ---------- Section divider for "sem horário hoje" ---------- */
+  .section-note{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 30px 0 12px 0;
+    padding-left: 56px;
+  }
+
+  /* ---------- FAB ---------- */
+  .fab{
+    position: fixed;
+    right: 24px;
+    bottom: 26px;
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    box-shadow: 0 8px 22px rgba(30,42,34,0.28);
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    z-index: 30;
+    transition: transform .15s ease;
+  }
+  .fab:active{ transform: scale(0.93); }
+  .fab svg{ width: 24px; height:24px; }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    position: fixed; inset:0;
+    background: rgba(30,42,34,0.4);
+    backdrop-filter: blur(2px);
+    display:flex; align-items:flex-end; justify-content:center;
+    z-index: 40;
+    opacity:0; pointer-events:none;
+    transition: opacity .2s ease;
+  }
+  .modal-overlay.open{ opacity:1; pointer-events:all; }
+  @media (min-width: 560px){
+    .modal-overlay{ align-items:center; }
+  }
+  .modal{
+    background: var(--paper);
+    width: 100%;
+    max-width: 460px;
+    border-radius: 20px 20px 0 0;
+    padding: 22px 22px 26px;
+    transform: translateY(24px);
+    transition: transform .25s ease;
+    max-height: 88vh;
+    overflow-y:auto;
+  }
+  @media (min-width: 560px){
+    .modal{ border-radius: 20px; }
+  }
+  .modal-overlay.open .modal{ transform: translateY(0); }
+
+  .modal h2{
+    font-family:'Fraunces', serif;
+    font-size: 21px;
+    margin: 0 0 18px;
+  }
+  .field{ margin-bottom: 16px; }
+  .field label{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .field input[type=text], .field input[type=time]{
+    width: 100%;
+    padding: 11px 12px;
+    border-radius: 10px;
+    border: 1.5px solid var(--line);
+    background: var(--paper-raised);
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size: 15px;
+    color: var(--ink);
+  }
+  .field input:focus{ outline: 2px solid var(--sun); outline-offset: 1px; }
+
+  .days-row{ display:flex; gap: 6px; flex-wrap: wrap; }
+  .day-chip{
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    border: 1.5px solid var(--line);
+    background: var(--paper-raised);
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .day-chip.active{
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+
+  .icon-row{ display:flex; gap: 8px; flex-wrap: wrap; }
+  .icon-dot{
+    width: 42px; height: 42px;
+    border-radius: 10px;
+    border: 1.5px solid var(--line);
+    background: var(--paper-raised);
+    font-size: 21px;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .icon-dot.active{ border-color: var(--ink); background: var(--sun-soft); }
+
+  .color-row{ display:flex; gap: 10px; }
+  .color-dot{
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    cursor:pointer;
+    border: 2.5px solid transparent;
+  }
+  .color-dot.active{ border-color: var(--ink); }
+
+  .modal-actions{
+    display:flex; gap: 10px; margin-top: 22px;
+  }
+  .btn{
+    flex:1;
+    padding: 13px;
+    border-radius: 12px;
+    border: none;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-weight: 600;
+    font-size: 14.5px;
+    cursor:pointer;
+  }
+  .btn-primary{ background: var(--ink); color: var(--paper); }
+  .btn-secondary{ background: transparent; color: var(--ink-soft); border: 1.5px solid var(--line); }
+  .btn-danger{ background: var(--danger); color: white; }
+
+  .modal-header-row{
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .close-x{
+    background:none;border:none;cursor:pointer;color:var(--ink-soft);
+    display:flex;padding:4px;
+  }
+
+  /* ---------- Calendar modal ---------- */
+  .cal-nav{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom: 16px;
+  }
+  .cal-nav-btn{
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    border: 1.5px solid var(--line);
+    background: var(--paper-raised);
+    color: var(--ink-soft);
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .cal-nav-btn svg{ width: 16px; height: 16px; }
+  .cal-month-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .cal-grid{
+    display:grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+  .cal-weekday{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    text-align:center;
+    opacity: 0.7;
+    padding-bottom: 4px;
+  }
+  .cal-day{
+    aspect-ratio: 1;
+    border-radius: 9px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+    position: relative;
+  }
+  .cal-day.empty{ visibility:hidden; }
+  .cal-day.today{ box-shadow: 0 0 0 1.5px var(--sun); color: var(--ink); }
+  .cal-day.full{
+    background: var(--done);
+    color: white;
+    font-weight: 600;
+  }
+  .cal-day.partial{
+    background: var(--paper-raised);
+    border: 1.5px solid var(--line);
+  }
+  .cal-legend{
+    display:flex; gap: 16px; margin-top: 16px;
+    font-size: 12px; color: var(--ink-soft);
+  }
+  .cal-legend span{ display:flex; align-items:center; gap: 6px; }
+  .cal-legend .dot{ width:10px; height:10px; border-radius:3px; }
+
+  .toast{
+    position: fixed;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-140%);
+    background: var(--ink);
+    color: var(--paper);
+    padding: 10px 18px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-family:'IBM Plex Sans', sans-serif;
+    z-index: 50;
+    transition: transform .3s ease;
+    box-shadow: var(--shadow);
+  }
+  .toast.show{ transform: translateX(-50%) translateY(0); }
+
+  ::selection{ background: var(--sun-soft); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <div>
+      <p class="eyebrow" id="dateEyebrow">—</p>
+      <h1 id="greeting">Minha rotina diária</h1>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-ring-row">
+        <button class="cal-btn" id="calBtn" aria-label="Ver calendário">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="16" y1="2.5" x2="16" y2="6.5"/></svg>
+        </button>
+        <div class="progress-ring-box">
+          <svg width="64" height="64" viewBox="0 0 64 64">
+            <circle class="ring-track" cx="32" cy="32" r="27" fill="none" stroke-width="6"/>
+            <circle class="ring-fill" id="ringFill" cx="32" cy="32" r="27" fill="none" stroke-width="6" stroke-linecap="round" stroke-dasharray="169.6" stroke-dashoffset="169.6"/>
+          </svg>
+          <div class="progress-fraction" id="progressFraction">0/0</div>
+        </div>
+      </div>
+      <span class="progress-label">concluídos</span>
+    </div>
+  </header>
+
+  <div id="content"></div>
+</div>
+
+<button class="fab" id="fabAdd" aria-label="Adicionar hábito">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</button>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header-row">
+      <h2 id="modalTitle">Novo hábito</h2>
+      <button class="close-x" id="closeModal">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div class="field">
+      <label for="habitName">Nome do hábito</label>
+      <input type="text" id="habitName" placeholder="Ex: Beber água, Alongar, Ler 10 páginas" maxlength="60">
+    </div>
+
+    <div class="field">
+      <label for="habitTime">Horário</label>
+      <input type="time" id="habitTime" value="08:00">
+    </div>
+
+    <div class="field">
+      <label>Dias da semana</label>
+      <div class="days-row" id="daysRow"></div>
+    </div>
+
+    <div class="field">
+      <label>Ícone</label>
+      <div class="icon-row" id="iconRow"></div>
+    </div>
+
+    <div class="field">
+      <label>Cor</label>
+      <div class="color-row" id="colorRow"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="deleteHabitBtn" style="display:none;">Excluir</button>
+      <button class="btn btn-secondary" id="cancelModal">Cancelar</button>
+      <button class="btn btn-primary" id="saveHabitBtn">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="calOverlay">
+  <div class="modal">
+    <div class="modal-header-row">
+      <h2>Dias completos</h2>
+      <button class="close-x" id="closeCalModal">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="cal-nav">
+      <button class="cal-nav-btn" id="calPrev" aria-label="Mês anterior">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="cal-month-label" id="calMonthLabel">—</span>
+      <button class="cal-nav-btn" id="calNext" aria-label="Próximo mês">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-legend">
+      <span><span class="dot" style="background:var(--done)"></span>dia 100% completo</span>
+      <span><span class="dot" style="background:var(--paper-raised);border:1.5px solid var(--line)"></span>dia com pendência</span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const PALETTE = ['#3B7A6E','#D9A441','#6B4E71','#B4553E','#3E6B96','#7A8C3B'];
+  const ICONS = ['💧','🏃','📖','🧘','😴','💊','🍎','✍️','🧹','💼','🎯','🌱','🧴','🐾','🎵','🙏'];
+  const DAY_LABELS = ['D','S','T','Q','Q','S','S'];
+  const DAY_NAMES_FULL = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+
+  let state = { habits: [], completions: {} };
+  let editingHabitId = null;
+  let selectedDays = [0,1,2,3,4,5,6];
+  let selectedColor = PALETTE[0];
+  let selectedIcon = ICONS[0];
+  let calViewDate = new Date();
+
+  const $ = (sel) => document.querySelector(sel);
+  const content = $('#content');
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function todayStr(d = new Date()){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+  function timeToMinutes(t){ const [h,m] = t.split(':').map(Number); return h*60+m; }
+  function isScheduled(habit, date){ return habit.days.includes(date.getDay()); }
+  function isDone(habitId, dateStr){ return !!(state.completions[dateStr] && state.completions[dateStr][habitId]); }
+
+  function showToast(msg){
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(showToast._tm);
+    showToast._tm = setTimeout(()=> t.classList.remove('show'), 1800);
+  }
+
+  // ---------- Storage ----------
+  async function loadData(){
+    try{
+      const res = await window.storage.get('habit-data');
+      if(res && res.value){
+        state = JSON.parse(res.value);
+        state.habits = state.habits || [];
+        state.completions = state.completions || {};
+      }
+    }catch(e){
+      // key doesn't exist yet — fine, start fresh
+    }
+  }
+
+  let saveTimer = null;
+  function saveData(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      try{
+        await window.storage.set('habit-data', JSON.stringify(state));
+      }catch(e){
+        showToast('Não foi possível salvar. Tente novamente.');
+      }
+    }, 150);
+  }
+
+  // ---------- Streak ----------
+  function computeStreak(habit){
+    const today = new Date();
+    let d = new Date(today);
+    const todayKey = todayStr(today);
+    if(isScheduled(habit, today) && !isDone(habit.id, todayKey)){
+      d.setDate(d.getDate()-1);
+    }
+    let streak = 0;
+    let guard = 0;
+    while(guard < 730){
+      guard++;
+      const key = todayStr(d);
+      if(isScheduled(habit, d)){
+        if(isDone(habit.id, key)){
+          streak++;
+          d.setDate(d.getDate()-1);
+        } else {
+          break;
+        }
+      } else {
+        d.setDate(d.getDate()-1);
+      }
+    }
+    return streak;
+  }
+
+  function weekStrip(habit){
+    const days = [];
+    const today = new Date();
+    for(let i=6;i>=0;i--){
+      const d = new Date(today);
+      d.setDate(d.getDate()-i);
+      const key = todayStr(d);
+      const scheduled = isScheduled(habit, d);
+      const done = isDone(habit.id, key);
+      const isToday = i===0;
+      days.push({scheduled, done, isToday});
+    }
+    return days;
+  }
+
+  // ---------- Rendering ----------
+  function render(){
+    const now = new Date();
+    $('#dateEyebrow').textContent = now.toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long' });
+
+    const todayHabits = state.habits.filter(h => isScheduled(h, now));
+    const key = todayStr(now);
+    const doneCount = todayHabits.filter(h => isDone(h.id, key)).length;
+    const total = todayHabits.length;
+
+    $('#progressFraction').textContent = `${doneCount}/${total}`;
+    const circumference = 169.6;
+    const frac = total > 0 ? doneCount/total : 0;
+    $('#ringFill').style.strokeDashoffset = circumference - (frac*circumference);
+
+    if(total === 0 && state.habits.length === 0){
+      content.innerHTML = `
+        <div class="empty">
+          <h2>Nenhum hábito ainda</h2>
+          <p>Adicione um hábito com horário e ele vai aparecer aqui, na sua rotina do dia.</p>
+        </div>`;
+      return;
+    }
+
+    if(total === 0){
+      content.innerHTML = `
+        <div class="empty">
+          <h2>Nada agendado para hoje</h2>
+          <p>Você tem ${state.habits.length} hábito(s) cadastrado(s), mas nenhum para ${DAY_NAMES_FULL[now.getDay()]}.</p>
+        </div>`;
+      return;
+    }
+
+    const sorted = [...todayHabits].sort((a,b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+
+    let minTime = Math.min(...sorted.map(h => timeToMinutes(h.time)), timeToMinutes('07:00'));
+    let maxTime = Math.max(...sorted.map(h => timeToMinutes(h.time)), timeToMinutes('21:00'));
+    minTime = Math.max(0, minTime - 60);
+    maxTime = Math.min(24*60-1, maxTime + 60);
+    const range = maxTime - minTime;
+
+    const nowMin = now.getHours()*60 + now.getMinutes();
+    const nowInRange = nowMin >= minTime && nowMin <= maxTime;
+    const nowPct = ((nowMin - minTime)/range) * 100;
+
+    let hourTicks = '';
+    for(let h = Math.ceil(minTime/60); h*60 <= maxTime; h += 3){
+      const pct = ((h*60 - minTime)/range) * 100;
+      hourTicks += `<div class="hour-tick" style="top:${pct}%">${pad(h)}h</div>`;
+    }
+
+    let itemsHtml = '';
+    sorted.forEach(h => {
+      const done = isDone(h.id, key);
+      const streak = computeStreak(h);
+      const strip = weekStrip(h).map(d => {
+        let cls = 'sq';
+        if(d.done) cls += ' on';
+        else if(d.scheduled) cls += ' off-scheduled';
+        if(d.isToday) cls += ' today';
+        return `<div class="${cls}" style="${d.done ? `background:${h.color};` : (d.scheduled ? `border-color:${h.color};` : '')}"></div>`;
+      }).join('');
+
+      itemsHtml += `
+        <div class="habit-item ${done ? 'done':''}" data-id="${h.id}" style="${done ? `--card-accent:${h.color}` : ''}">
+          <div class="habit-node" style="${done ? `background:${h.color};border-color:${h.color};` : `border-color:${h.color}`}"></div>
+          <div class="habit-card" style="${done ? `background:${h.color}18; border-color:${h.color}55;` : ''}">
+            <div class="habit-top">
+              <button class="check" data-toggle="${h.id}" style="${done ? `background:${h.color};border-color:${h.color};` : `border-color:${h.color}`}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </button>
+              <div class="habit-main">
+                <div class="habit-name-row">
+                  <div class="habit-name-left">
+                    <span class="habit-icon">${h.icon || '🎯'}</span>
+                    <span class="habit-name">${escapeHtml(h.name)}</span>
+                  </div>
+                  <span class="habit-time">${h.time}</span>
+                </div>
+                <div class="habit-meta">
+                  <span class="streak ${streak===0?'zero':''}">${streak>0 ? '🔥' : '·'} ${streak} dia${streak===1?'':'s'}</span>
+                  <div class="week-strip">${strip}</div>
+                  <div class="habit-actions">
+                    <button class="icon-btn" data-edit="${h.id}" aria-label="Editar">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    });
+
+    content.innerHTML = `
+      <div class="rail-wrap">
+        <div class="rail-line"></div>
+        ${hourTicks}
+        ${nowInRange ? `<div class="now-marker" style="top:${nowPct}%"><span class="dot"></span><span class="line"></span><span class="time">${pad(now.getHours())}:${pad(now.getMinutes())}</span></div>` : ''}
+        ${itemsHtml}
+      </div>`;
+
+    content.querySelectorAll('[data-toggle]').forEach(btn => {
+      btn.addEventListener('click', () => toggleHabit(btn.getAttribute('data-toggle')));
+    });
+    content.querySelectorAll('[data-edit]').forEach(btn => {
+      btn.addEventListener('click', () => openModal(btn.getAttribute('data-edit')));
+    });
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function toggleHabit(id){
+    const key = todayStr(new Date());
+    if(!state.completions[key]) state.completions[key] = {};
+    const wasDone = !!state.completions[key][id];
+    if(wasDone){
+      delete state.completions[key][id];
+    } else {
+      state.completions[key][id] = true;
+    }
+    saveData();
+    render();
+    if(!wasDone){
+      const h = state.habits.find(x=>x.id===id);
+      if(h) showToast(`${h.name} concluído ✓`);
+    }
+  }
+
+  // ---------- Modal ----------
+  function buildDaysRow(){
+    const row = $('#daysRow');
+    row.innerHTML = '';
+    DAY_LABELS.forEach((label, i) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'day-chip' + (selectedDays.includes(i) ? ' active' : '');
+      chip.textContent = label;
+      chip.addEventListener('click', () => {
+        if(selectedDays.includes(i)){
+          selectedDays = selectedDays.filter(d => d !== i);
+        } else {
+          selectedDays.push(i);
+        }
+        buildDaysRow();
+      });
+      row.appendChild(chip);
+    });
+  }
+
+  function buildIconRow(){
+    const row = $('#iconRow');
+    row.innerHTML = '';
+    ICONS.forEach(ic => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'icon-dot' + (ic === selectedIcon ? ' active' : '');
+      btn.textContent = ic;
+      btn.addEventListener('click', () => { selectedIcon = ic; buildIconRow(); });
+      row.appendChild(btn);
+    });
+  }
+
+  function buildColorRow(){
+    const row = $('#colorRow');
+    row.innerHTML = '';
+    PALETTE.forEach(c => {
+      const dot = document.createElement('button');
+      dot.type = 'button';
+      dot.className = 'color-dot' + (c === selectedColor ? ' active' : '');
+      dot.style.background = c;
+      dot.addEventListener('click', () => { selectedColor = c; buildColorRow(); });
+      row.appendChild(dot);
+    });
+  }
+
+  function openModal(habitId){
+    editingHabitId = habitId || null;
+    const overlay = $('#modalOverlay');
+    const deleteBtn = $('#deleteHabitBtn');
+
+    if(editingHabitId){
+      const h = state.habits.find(x => x.id === editingHabitId);
+      $('#modalTitle').textContent = 'Editar hábito';
+      $('#habitName').value = h.name;
+      $('#habitTime').value = h.time;
+      selectedDays = [...h.days];
+      selectedColor = h.color;
+      selectedIcon = h.icon || ICONS[0];
+      deleteBtn.style.display = 'block';
+    } else {
+      $('#modalTitle').textContent = 'Novo hábito';
+      $('#habitName').value = '';
+      $('#habitTime').value = '08:00';
+      selectedDays = [0,1,2,3,4,5,6];
+      selectedColor = PALETTE[state.habits.length % PALETTE.length];
+      selectedIcon = ICONS[state.habits.length % ICONS.length];
+      deleteBtn.style.display = 'none';
+    }
+    buildDaysRow();
+    buildIconRow();
+    buildColorRow();
+    overlay.classList.add('open');
+    setTimeout(()=> $('#habitName').focus(), 200);
+  }
+
+  function closeModal(){
+    $('#modalOverlay').classList.remove('open');
+    editingHabitId = null;
+  }
+
+  function saveHabit(){
+    const name = $('#habitName').value.trim();
+    const time = $('#habitTime').value;
+    if(!name){ showToast('Dê um nome ao hábito'); return; }
+    if(selectedDays.length === 0){ showToast('Escolha ao menos um dia'); return; }
+
+    if(editingHabitId){
+      const h = state.habits.find(x => x.id === editingHabitId);
+      h.name = name; h.time = time; h.days = [...selectedDays]; h.color = selectedColor; h.icon = selectedIcon;
+    } else {
+      state.habits.push({
+        id: 'h_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+        name, time, days: [...selectedDays], color: selectedColor, icon: selectedIcon
+      });
+    }
+    saveData();
+    closeModal();
+    render();
+  }
+
+  function deleteHabit(){
+    if(!editingHabitId) return;
+    state.habits = state.habits.filter(h => h.id !== editingHabitId);
+    Object.keys(state.completions).forEach(day => {
+      delete state.completions[day][editingHabitId];
+    });
+    saveData();
+    closeModal();
+    render();
+  }
+
+  // ---------- Calendar modal ----------
+  const MONTH_NAMES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+
+  function dayCompletionStatus(date){
+    const scheduled = state.habits.filter(h => isScheduled(h, date));
+    if(scheduled.length === 0) return null; // nothing planned that day
+    const key = todayStr(date);
+    const doneCount = scheduled.filter(h => isDone(h.id, key)).length;
+    if(doneCount === scheduled.length) return 'full';
+    if(doneCount > 0) return 'partial-done';
+    return 'partial';
+  }
+
+  function renderCalendar(){
+    const year = calViewDate.getFullYear();
+    const month = calViewDate.getMonth();
+    $('#calMonthLabel').textContent = `${MONTH_NAMES[month]} de ${year}`;
+
+    const grid = $('#calGrid');
+    grid.innerHTML = '';
+    DAY_LABELS.forEach(l => {
+      const el = document.createElement('div');
+      el.className = 'cal-weekday';
+      el.textContent = l;
+      grid.appendChild(el);
+    });
+
+    const firstDay = new Date(year, month, 1);
+    const startOffset = firstDay.getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const todayKey = todayStr(new Date());
+
+    for(let i = 0; i < startOffset; i++){
+      const el = document.createElement('div');
+      el.className = 'cal-day empty';
+      grid.appendChild(el);
+    }
+
+    for(let d = 1; d <= daysInMonth; d++){
+      const date = new Date(year, month, d);
+      const key = todayStr(date);
+      const status = date > new Date() ? null : dayCompletionStatus(date);
+      const el = document.createElement('div');
+      let cls = 'cal-day';
+      if(status === 'full') cls += ' full';
+      else if(status === 'partial' || status === 'partial-done') cls += ' partial';
+      if(key === todayKey) cls += ' today';
+      el.className = cls;
+      el.textContent = d;
+      grid.appendChild(el);
+    }
+  }
+
+  function openCalModal(){
+    calViewDate = new Date();
+    renderCalendar();
+    $('#calOverlay').classList.add('open');
+  }
+  function closeCalModal(){ $('#calOverlay').classList.remove('open'); }
+
+  $('#calBtn').addEventListener('click', openCalModal);
+  $('#closeCalModal').addEventListener('click', closeCalModal);
+  $('#calOverlay').addEventListener('click', (e) => { if(e.target.id === 'calOverlay') closeCalModal(); });
+  $('#calPrev').addEventListener('click', () => {
+    calViewDate.setMonth(calViewDate.getMonth() - 1);
+    renderCalendar();
+  });
+  $('#calNext').addEventListener('click', () => {
+    calViewDate.setMonth(calViewDate.getMonth() + 1);
+    renderCalendar();
+  });
+
+  // ---------- Init ----------
+  $('#fabAdd').addEventListener('click', () => openModal(null));
+  $('#closeModal').addEventListener('click', closeModal);
+  $('#cancelModal').addEventListener('click', closeModal);
+  $('#saveHabitBtn').addEventListener('click', saveHabit);
+  $('#deleteHabitBtn').addEventListener('click', deleteHabit);
+  $('#modalOverlay').addEventListener('click', (e) => { if(e.target.id === 'modalOverlay') closeModal(); });
+
+  (async function init(){
+    content.innerHTML = `<div class="empty"><h2>Carregando…</h2><p>Buscando seus hábitos salvos.</p></div>`;
+    await loadData();
+    render();
+    setInterval(render, 60000);
+  })();
+})();
+</script>
+
+</body>
+</html>
